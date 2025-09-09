@@ -4,8 +4,9 @@ const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { handleDatabaseError } = require('../middleware/connectionHandler');
-const { getActiveUserCount } = require('../middleware/sessionManager');
+const { getActiveUserCount, updateHeartbeat, removeUserSession } = require('../middleware/sessionManager');
 const { getConnectionStatus } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 
 const app = express();
 
@@ -50,6 +51,26 @@ app.get('/health', (req, res) => {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
     }
+  });
+});
+
+// Heartbeat endpoint to detect active tabs
+app.post('/api/heartbeat', authenticateToken, (req, res) => {
+  const updated = updateHeartbeat(req.user.id);
+  res.json({ 
+    success: updated,
+    timestamp: new Date().toISOString(),
+    message: updated ? 'Heartbeat updated' : 'Session not found'
+  });
+});
+
+// Manual logout endpoint
+app.post('/api/logout', authenticateToken, (req, res) => {
+  const removed = removeUserSession(req.user.id);
+  res.json({ 
+    success: true,
+    sessionRemoved: removed,
+    message: 'Logged out successfully'
   });
 });
 

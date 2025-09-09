@@ -1,16 +1,63 @@
 class StorageManagementApp {
     constructor() {
-        this.baseURL = 'http://localhost:3000/api';
+        this.baseURL = `${window.location.origin}/api`;
         this.token = localStorage.getItem('token');
         this.user = JSON.parse(localStorage.getItem('user') || '{}');
+        this.heartbeatInterval = null;
         this.init();
+        this.setupEventListeners();
     }
 
     async init() {
         if (this.token && this.user.id) {
             this.showMainApp();
+            this.startHeartbeat();
         } else {
             this.showAuth();
+        }
+    }
+
+    setupEventListeners() {
+        // Detect tab close/page unload
+        window.addEventListener('beforeunload', (e) => {
+            if (this.token) {
+                this.logout(false); // Silent logout without redirect
+                this.stopHeartbeat();
+            }
+        });
+
+        // Detect tab visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.stopHeartbeat();
+            } else if (this.token) {
+                this.startHeartbeat();
+            }
+        });
+    }
+
+    startHeartbeat() {
+        this.stopHeartbeat(); // Clear any existing interval
+        
+        if (!this.token) return;
+        
+        this.heartbeatInterval = setInterval(async () => {
+            try {
+                await this.apiCall('/heartbeat', 'POST');
+            } catch (error) {
+                console.warn('Heartbeat failed:', error);
+                // If heartbeat fails, user might be logged out
+                if (error.message.includes('token') || error.message.includes('401')) {
+                    this.handleLogout();
+                }
+            }
+        }, 90000); // 90 seconds
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
         }
     }
 
@@ -315,12 +362,31 @@ class StorageManagementApp {
         document.getElementById('item-totalsample').value = total;
     }
 
-    logout() {
+    async logout(showAuth = true) {
+        this.stopHeartbeat();
+        
+        // Send logout request to server if token exists
+        if (this.token) {
+            try {
+                await this.apiCall('/logout', 'POST');
+            } catch (error) {
+                console.warn('Logout API call failed:', error);
+            }
+        }
+        
         this.token = null;
         this.user = {};
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        this.showAuth();
+        
+        if (showAuth) {
+            this.showAuth();
+        }
+    }
+
+    handleLogout() {
+        // Called when session is invalid
+        this.logout(true);
     }
 
     showMessage(elementId, message, type) {
