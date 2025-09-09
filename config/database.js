@@ -13,11 +13,9 @@ const sequelize = new Sequelize(
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     dialectOptions: {
       connectTimeout: 60000,
-      acquireTimeout: 60000,
-      timeout: 60000,
     },
     pool: {
-      max: 10,
+      max: 1,
       min: 0,
       acquire: 30000,
       idle: 10000
