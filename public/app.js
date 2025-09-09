@@ -10,17 +10,39 @@ class StorageManagementApp {
 
     async init() {
         if (this.token && this.user.id) {
-            this.showMainApp();
-            this.startHeartbeat();
+            // Validate session before showing main app
+            const isValidSession = await this.validateSession();
+            if (isValidSession) {
+                this.showMainApp();
+                this.startHeartbeat();
+            } else {
+                // Session was cleaned up (tab closed, timeout, etc.)
+                console.log('Session invalid or cleaned up - forcing re-login');
+                this.handleLogout();
+                this.showAuth();
+            }
         } else {
             this.showAuth();
         }
     }
 
+    async validateSession() {
+        try {
+            const result = await this.apiCall('/validate-session', 'GET');
+            console.log('Session validation result:', result);
+            return result.valid;
+        } catch (error) {
+            console.warn('Session validation failed:', error);
+            return false;
+        }
+    }
+
     setupEventListeners() {
-        // Detect tab close/page unload
+        // Detect tab close/page unload - more aggressive cleanup
         window.addEventListener('beforeunload', (e) => {
             if (this.token) {
+                console.log('Tab closing detected - initiating cleanup');
+                this.sendTabCloseSignal(); // Send immediate signal
                 this.logout(false); // Silent logout without redirect
                 this.stopHeartbeat();
             }
@@ -29,11 +51,63 @@ class StorageManagementApp {
         // Detect tab visibility changes
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
+                console.log('Tab hidden - stopping heartbeat');
                 this.stopHeartbeat();
+                // Send a quick cleanup signal when tab becomes hidden
+                this.sendTabCloseSignal();
             } else if (this.token) {
+                console.log('Tab visible - restarting heartbeat');
                 this.startHeartbeat();
             }
         });
+
+        // Detect page hide event (more reliable than beforeunload)
+        window.addEventListener('pagehide', (e) => {
+            if (this.token) {
+                console.log('Page hide detected - sending cleanup signal');
+                this.sendTabCloseSignal();
+            }
+        });
+
+        // Detect window blur (user switching tabs)
+        window.addEventListener('blur', () => {
+            if (this.token) {
+                console.log('Window blur detected');
+                // Don't stop heartbeat on blur, but log for debugging
+            }
+        });
+    }
+
+    // Send immediate tab close signal to server
+    async sendTabCloseSignal() {
+        if (this.token && this.user.id) {
+            try {
+                // Use sendBeacon for reliable delivery during page unload
+                const data = JSON.stringify({
+                    userId: this.user.id,
+                    timestamp: Date.now(),
+                    reason: 'tab_close'
+                });
+                
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(`${this.baseURL}/tab-close`, data);
+                    console.log('Tab close signal sent via sendBeacon');
+                } else {
+                    // Fallback for older browsers
+                    fetch(`${this.baseURL}/tab-close`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: data,
+                        keepalive: true // Keep connection alive during unload
+                    }).catch(err => console.warn('Tab close signal failed:', err));
+                }
+            } catch (error) {
+                console.warn('Could not send tab close signal:', error);
+            }
+        }
     }
 
     startHeartbeat() {

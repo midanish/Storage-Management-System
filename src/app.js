@@ -105,6 +105,53 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
   }
 });
 
+// Tab close detection endpoint - immediate cleanup
+app.post('/api/tab-close', authenticateToken, async (req, res) => {
+  try {
+    const { userId, reason } = req.body;
+    console.log(`Tab close detected for user ${req.user.id} (reason: ${reason || 'unknown'})`);
+    
+    // Immediate session cleanup with connection reset
+    const removed = await removeUserSession(req.user.id);
+    
+    res.json({
+      success: true,
+      sessionRemoved: removed,
+      message: 'Tab close processed - cleanup initiated'
+    });
+  } catch (error) {
+    console.error('Error processing tab close:', error);
+    // Still return success to prevent client-side errors
+    res.json({
+      success: true,
+      message: 'Tab close signal received'
+    });
+  }
+});
+
+// Session validation endpoint - check if session is still valid
+app.get('/api/validate-session', authenticateToken, async (req, res) => {
+  try {
+    const isValid = true; // If we got here, token is valid
+    const activeUserCount = getActiveUserCount();
+    
+    res.json({
+      success: true,
+      valid: isValid,
+      user: req.user,
+      activeUsers: activeUserCount,
+      message: 'Session is valid'
+    });
+  } catch (error) {
+    console.error('Error validating session:', error);
+    res.status(500).json({
+      success: false,
+      valid: false,
+      message: 'Error validating session'
+    });
+  }
+});
+
 const authRoutes = require('../routes/auth');
 const itemRoutes = require('../routes/items');
 const borrowRoutes = require('../routes/borrow');

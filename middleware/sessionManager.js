@@ -19,7 +19,7 @@ const trackUserActivity = (req, res, next) => {
   next();
 };
 
-const checkIdleUsers = () => {
+const checkIdleUsers = async () => {
   const now = Date.now();
   const expiredUsers = [];
   
@@ -36,10 +36,22 @@ const checkIdleUsers = () => {
     }
   }
   
-  expiredUsers.forEach(({userId, reason}) => {
+  // Process expired users with connection cleanup
+  for (const {userId, reason} of expiredUsers) {
     activeUsers.delete(userId);
     console.log(`Cleaned up user ${userId} - reason: ${reason}`);
-  });
+    
+    // Force connection cleanup for expired sessions
+    if (reason === 'no_heartbeat') {
+      console.log(`Tab closed detected for user ${userId} - forcing connection cleanup`);
+      try {
+        await forceConnectionReset();
+        console.log(`Database connections reset for tab closure: ${userId}`);
+      } catch (error) {
+        console.error('Error resetting connections on tab closure:', error);
+      }
+    }
+  }
   
   if (expiredUsers.length > 0) {
     console.log(`Total cleaned up: ${expiredUsers.length} user sessions`);
