@@ -1,18 +1,12 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "10mb"
-      }
-    },
-    {
-      "src": "public/**/*",
-      "use": "@vercel/static"
+  "functions": {
+    "server.js": {
+      "runtime": "@vercel/node@3.0.7",
+      "memory": 512,
+      "maxDuration": 10
     }
-  ],
+  },
   "routes": [
     {
       "src": "/public/(.*)",
@@ -20,14 +14,8 @@
     },
     {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "/server.js"
     }
   ],
-  "functions": {
-    "server.js": {
-      "memory": 512,
-      "maxDuration": 10
-    }
-  },
   "regions": ["iad1"]
 }
