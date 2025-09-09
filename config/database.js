@@ -59,17 +59,138 @@ function getSequelizeInstance() {
   return sequelize;
 }
 
-// Graceful shutdown
+// Force close all connections
 async function closeConnection() {
   if (sequelize) {
     try {
-      await sequelize.close();
-      console.log('Database connection closed');
+      // Force close all connections in the pool
+      await sequelize.connectionManager.close();
+      console.log('All database connections closed');
     } catch (error) {
-      console.error('Error closing database connection:', error);
+      console.error('Error closing database connections:', error);
     }
     sequelize = null;
     connectionPromise = null;
+  }
+}
+
+// Force drain and close connection pool
+async function drainConnectionPool() {
+  if (sequelize && sequelize.connectionManager.pool) {
+    try {
+      const pool = sequelize.connectionManager.pool;
+      
+      // Get all connections and close them
+      const connections = pool._allConnections || [];
+      console.log(`Closing ${connections.length} active connections`);
+      
+      for (const connection of connections) {
+        try {
+          if (connection && connection.end) {
+            await connection.end();
+          } else if (connection && connection.destroy) {
+            connection.destroy();
+          }
+        } catch (err) {
+          console.warn('Error closing individual connection:', err);
+        }
+      }
+      
+      // Clear the pool
+      if (pool.clear) {
+        await pool.clear();
+      }
+      
+      console.log('Connection pool drained successfully');
+      return true;
+    } catch (error) {
+      console.error('Error draining connection pool:', error);
+      return false;
+    }
+  }
+  return false;
+}
+
+// Kill specific connection by user session
+async function killUserConnection(userId) {
+  try {
+    if (sequelize) {
+      // Get current connection ID and kill it
+      const [result] = await sequelize.query(`SELECT CONNECTION_ID() as connId`, {
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      if (result && result.connId) {
+        await sequelize.query(`KILL ${result.connId}`, {
+          type: sequelize.QueryTypes.RAW
+        });
+        console.log(`Killed database connection ${result.connId} for user: ${userId}`);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn(`Could not kill connection for user ${userId}:`, error);
+  }
+  return false;
+}
+
+// Force close and recreate connection pool
+async function forceConnectionReset() {
+  try {
+    if (sequelize) {
+      console.log('Force resetting database connection pool...');
+      
+      // Close existing connection manager
+      await sequelize.connectionManager.close();
+      
+      // Clear the singleton instance
+      sequelize = null;
+      connectionPromise = null;
+      
+      console.log('Database connection pool reset complete');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error resetting connection pool:', error);
+    return false;
+  }
+}
+
+// Get detailed connection status for debugging
+async function getConnectionDetails() {
+  try {
+    if (sequelize) {
+      const [connections] = await sequelize.query(`
+        SELECT
+          ID as connectionId,
+          USER as user,
+          HOST as host,
+          DB as databaseName,
+          COMMAND as command,
+          TIME as timeInSeconds,
+          STATE as state
+        FROM INFORMATION_SCHEMA.PROCESSLIST
+        WHERE USER = 'Storage_atomicdig' AND COMMAND != 'Sleep'
+        ORDER BY TIME DESC
+      `, { type: sequelize.QueryTypes.SELECT });
+      
+      const pool = sequelize.connectionManager.pool;
+      const poolStats = {
+        size: pool ? pool.size : 0,
+        available: pool ? pool.available : 0,
+        using: pool ? pool.using : 0,
+        waiting: pool ? pool.waiting : 0
+      };
+      
+      return {
+        activeConnections: connections,
+        poolStats: poolStats,
+        timestamp: new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Error getting connection details:', error);
+    return { error: error.message };
   }
 }
 
@@ -81,6 +202,10 @@ process.on('beforeExit', closeConnection);
 module.exports = {
   sequelize: getSequelizeInstance(),
   closeConnection,
+  drainConnectionPool,
+  forceConnectionReset,
+  getConnectionDetails,
+  killUserConnection,
   getConnectionStatus: () => {
     try {
       if (!sequelize) return 0;

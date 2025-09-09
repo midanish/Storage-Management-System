@@ -1,3 +1,4 @@
+const { forceConnectionReset, getConnectionDetails } = require('../config/database');
 const activeUsers = new Map();
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes for faster cleanup
 const HEARTBEAT_TIMEOUT = 2 * 60 * 1000; // 2 minutes heartbeat timeout
@@ -82,8 +83,25 @@ const getActiveUserCount = () => {
   return activeUsers.size;
 };
 
-const forceLogoutUser = (userId) => {
+const forceLogoutUser = async (userId) => {
+  console.log(`Force logging out user: ${userId}`);
   activeUsers.delete(userId);
+  
+  // Log connection status before cleanup
+  try {
+    const connDetails = await getConnectionDetails();
+    console.log('Connection details before cleanup:', JSON.stringify(connDetails, null, 2));
+  } catch (error) {
+    console.warn('Could not get connection details before cleanup:', error);
+  }
+  
+  // Force connection reset to kill sleep connections
+  try {
+    await forceConnectionReset();
+    console.log(`Database connections reset for user logout: ${userId}`);
+  } catch (error) {
+    console.error('Error resetting connections on logout:', error);
+  }
 };
 
 // Clean up idle users every 1 minute for faster cleanup
@@ -99,10 +117,26 @@ const updateHeartbeat = (userId) => {
   return false;
 };
 
-const removeUserSession = (userId) => {
+const removeUserSession = async (userId) => {
   const removed = activeUsers.delete(userId);
   if (removed) {
     console.log(`Manually removed user session: ${userId}`);
+    
+    // Log connection status before cleanup
+    try {
+      const connDetails = await getConnectionDetails();
+      console.log('Connection details before session removal:', JSON.stringify(connDetails, null, 2));
+    } catch (error) {
+      console.warn('Could not get connection details before cleanup:', error);
+    }
+    
+    // Force connection reset to kill sleep connections
+    try {
+      await forceConnectionReset();
+      console.log(`Database connections reset for session removal: ${userId}`);
+    } catch (error) {
+      console.error('Error resetting connections on session removal:', error);
+    }
   }
   return removed;
 };

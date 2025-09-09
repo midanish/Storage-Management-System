@@ -369,6 +369,7 @@ class StorageManagementApp {
         if (this.token) {
             try {
                 await this.apiCall('/logout', 'POST');
+                console.log('Logout successful - database connections should be reset');
             } catch (error) {
                 console.warn('Logout API call failed:', error);
             }
@@ -412,10 +413,26 @@ class StorageManagementApp {
             const current = await this.apiCall('/borrow/current');
             const returnCount = current.borrowedItems.length;
             
+            // Get connection status for debugging
+            let connectionStatus = '';
+            try {
+                const connStatus = await this.apiCall('/connection-status', 'GET');
+                connectionStatus = `
+                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <small><strong>DB Connections:</strong> ${connStatus.connectionDetails.poolStats.size} |
+                        <strong>Active Users:</strong> ${connStatus.activeUsers} |
+                        <strong>Status:</strong> ${connStatus.success ? 'OK' : 'Error'}</small>
+                    </div>
+                `;
+            } catch (error) {
+                console.warn('Could not get connection status:', error);
+            }
+            
             document.getElementById('user-dashboard').innerHTML = `
                 <h3>Welcome, ${this.user.email || this.user.id}!</h3>
                 <p><strong>Currently Borrowed Items:</strong> ${returnCount}</p>
                 ${returnCount > 0 ? '<p>You have items that need to be returned. Check "My Items" section.</p>' : '<p>No items currently borrowed.</p>'}
+                ${connectionStatus}
             `;
         } catch (error) {
             console.error('Error loading dashboard:', error);

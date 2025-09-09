@@ -54,6 +54,28 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Connection status endpoint for debugging
+app.get('/api/connection-status', authenticateToken, async (req, res) => {
+  try {
+    const { getConnectionDetails } = require('../config/database');
+    const connDetails = await getConnectionDetails();
+    
+    res.json({
+      success: true,
+      connectionDetails: connDetails,
+      activeUsers: getActiveUserCount(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error getting connection status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting connection status',
+      error: error.message
+    });
+  }
+});
+
 // Heartbeat endpoint to detect active tabs
 app.post('/api/heartbeat', authenticateToken, (req, res) => {
   const updated = updateHeartbeat(req.user.id);
@@ -65,13 +87,22 @@ app.post('/api/heartbeat', authenticateToken, (req, res) => {
 });
 
 // Manual logout endpoint
-app.post('/api/logout', authenticateToken, (req, res) => {
-  const removed = removeUserSession(req.user.id);
-  res.json({ 
-    success: true,
-    sessionRemoved: removed,
-    message: 'Logged out successfully'
-  });
+app.post('/api/logout', authenticateToken, async (req, res) => {
+  try {
+    const removed = await removeUserSession(req.user.id);
+    res.json({
+      success: true,
+      sessionRemoved: removed,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during logout',
+      error: error.message
+    });
+  }
 });
 
 const authRoutes = require('../routes/auth');
