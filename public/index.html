@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: #2c3e50; color: white; padding: 1rem; margin-bottom: 2rem; }
+        .card { background: white; padding: 1.5rem; margin: 1rem 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .form-group { margin: 1rem 0; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .hidden { display: none; }
+        .nav { margin-bottom: 2rem; }
+        .nav button { margin-right: 10px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .table th, .table td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        .table th { background: #f8f9fa; }
+        .alert { padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .countdown { font-weight: bold; color: #e74c3c; }
+        .timer-green { color: #27ae60; }
+        .timer-yellow { color: #f39c12; }
+        .timer-red { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Storage Management System</h1>
+            <div id="user-info" class="hidden">
+                <span id="user-name"></span> | <span id="user-role"></span>
+                <button onclick="logout()" class="btn btn-danger" style="float: right;">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Authentication Section -->
+        <div id="auth-section">
+            <div class="card">
+                <h2>Login</h2>
+                <div id="auth-message"></div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="login-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="login-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <button type="button" onclick="showRegister()" class="btn btn-success">Register</button>
+                </form>
+            </div>
+
+            <div id="register-section" class="card hidden">
+                <h2>Register</h2>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="number" id="register-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="register-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="register-password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Role:</label>
+                        <select id="register-role" class="form-control" min="0">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Register</button>
+                    <button type="button" onclick="showLogin()" class="btn btn-primary">Back to Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div id="main-app" class="hidden">
+            <div class="nav">
+                <button onclick="showDashboard()" class="btn btn-primary">Dashboard</button>
+                <button onclick="showRegisterItem()" class="btn btn-success">Register Item</button>
+                <button onclick="showBorrowItems()" class="btn btn-warning">Borrow Items</button>
+                <button onclick="showMyItems()" class="btn btn-primary">My Items</button>
+                <button id="admin-nav" onclick="showAdminPanel()" class="btn btn-danger hidden">Admin Panel</button>
+            </div>
+
+            <!-- Dashboard -->
+            <div id="dashboard-section">
+                <div class="card">
+                    <h2>Dashboard</h2>
+                    <div id="user-dashboard"></div>
+                </div>
+            </div>
+
+            <!-- Register Item -->
+            <div id="register-item-section" class="hidden">
+                <div class="card">
+                    <h2>Register New Item</h2>
+                    <div id="register-item-message"></div>
+                    <form id="register-item-form">
+                        <div class="form-group">
+                            <label>Package Code:</label>
+                            <input type="text" id="item-packagecode" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Package Description:</label>
+                            <input type="text" id="item-packagedescription" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Category:</label>
+                            <select id="item-category" class="form-control">
+                                <option value="">Select Category</option>
+                                <option value="Firewall Sample">Firewall Sample</option>
+                                <option value="Dummy Unit and Firewall Sample">Dummy Unit and Firewall Sample</option>
+                                <option value="Dummy Unit">Dummy Unit</option>
+                                <option value="MSA/GRR">MSA/GRR</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sample Created By Shift (A/B/C):</label>
+                            <select id="item-shift" class="form-control">
+                                <option value="">Select Shift</option>
+                                <option value="A">Shift A</option>
+                                <option value="B">Shift B</option>
+                                <option value="C">Shift C</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dummy Unit:</label>
+                            <input type="number" id="item-dummyunit" class="form-control" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Total Sample (Auto-calculated):</label>
+                            <input type="number" id="item-totalsample" class="form-control" readonly>
+                        </div>
+                        
+                        <!-- Substrate Defects Section -->
+                        <h4>Substrate Defects</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label>White FM (Substrate):</label>
+                                <input type="number" id="item-whitefm-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Black FM (Substrate):</label>
+                                <input type="number" id="item-blackfm-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Chip (Substrate):</label>
+                                <input type="number" id="item-chip-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Scratches (Substrate):</label>
+                                <input type="number" id="item-scratches-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Crack (Substrate):</label>
+                                <input type="number" id="item-crack-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>FM on Foot (Substrate):</label>
+                                <input type="number" id="item-fmonfoot-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>FM on Shoulder (Substrate):</label>
+                                <input type="number" id="item-fmonshoulder-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>NFA (Substrate):</label>
+                                <input type="number" id="item-nfa-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>PFA (Substrate):</label>
+                                <input type="number" id="item-pfa-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Foot Burr (Substrate):</label>
+                                <input type="number" id="item-footburr-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Shoulder Burr (Substrate):</label>
+                                <input type="number" id="item-shoulderbur-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Expose Copper (Substrate):</label>
+                                <input type="number" id="item-exposecopper-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Resin Bleed (Substrate):</label>
+                                <input type="number" id="item-resinbleed-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Void (Substrate):</label>
+                                <input type="number" id="item-void-substrate" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Copla (Substrate):</label>
+                                <input type="number" id="item-copla-substrate" class="form-control" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Mold/MetalLid Defects Section -->
+                        <h4>Mold/MetalLid Defects</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label>White FM (Mold/MetalLid):</label>
+                                <input type="number" id="item-whitefm-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Black FM (Mold/MetalLid):</label>
+                                <input type="number" id="item-blackfm-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Edge Chip (Mold/MetalLid):</label>
+                                <input type="number" id="item-edgechip-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Corner Chip (Mold/MetalLid):</label>
+                                <input type="number" id="item-cornerchip-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Scratches (Mold/MetalLid):</label>
+                                <input type="number" id="item-scratches-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Crack (Mold/MetalLid):</label>
+                                <input type="number" id="item-crack-mold" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Illegible Marking (Mold/MetalLid):</label>
+                                <input type="number" id="item-illegiblemarking-mold" class="form-control" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Die Defects Section -->
+                        <h4>Die Defects</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label>White FM (Die):</label>
+                                <input type="number" id="item-whitefm-die" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Black FM (Die):</label>
+                                <input type="number" id="item-blackfm-die" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Chip (Die):</label>
+                                <input type="number" id="item-chip-die" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Scratches (Die):</label>
+                                <input type="number" id="item-scratches-die" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Crack (Die):</label>
+                                <input type="number" id="item-crack-die" class="form-control" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Bottom Defects Section -->
+                        <h4>Bottom Defects</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label>White FM (Bottom):</label>
+                                <input type="number" id="item-whitefm-bottom" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Black FM (Bottom):</label>
+                                <input type="number" id="item-blackfm-bottom" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Chip (Bottom):</label>
+                                <input type="number" id="item-chip-bottom" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Scratches (Bottom):</label>
+                                <input type="number" id="item-scratches-bottom" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Crack (Bottom):</label>
+                                <input type="number" id="item-crack-bottom" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Damage Ball (Bottom):</label>
+                                <input type="number" id="item-damageball-bottom" class="form-control" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Other Defects Section -->
+                        <h4>Other Defects</h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div class="form-group">
+                                <label>Multiple Defect:</label>
+                                <input type="number" id="item-multiple-defect" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Pitch:</label>
+                                <input type="number" id="item-pitch" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Sliver:</label>
+                                <input type="number" id="item-sliver" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Ball Discoloration:</label>
+                                <input type="number" id="item-ball-discoloration" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Burr:</label>
+                                <input type="number" id="item-burr" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>FM on Dambar:</label>
+                                <input type="number" id="item-fm-dambar" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>FM on Lead:</label>
+                                <input type="number" id="item-fm-lead" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Expose Copper on Dambar:</label>
+                                <input type="number" id="item-expose-copper-dambar" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Mold Flash:</label>
+                                <input type="number" id="item-mold-flash" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Metallic Particle:</label>
+                                <input type="number" id="item-metallic-particle" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Patchback:</label>
+                                <input type="number" id="item-patchback" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Bent Lead:</label>
+                                <input type="number" id="item-bent-lead" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Expose Tie Bar:</label>
+                                <input type="number" id="item-expose-tie-bar" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Fiber:</label>
+                                <input type="number" id="item-fiber" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Tool Mark:</label>
+                                <input type="number" id="item-tool-mark" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Good Unit:</label>
+                                <input type="number" id="item-good-unit" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Lead Shining:</label>
+                                <input type="number" id="item-lead-shining" class="form-control" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Acid Test Burr:</label>
+                                <input type="number" id="item-acid-test-burr" class="form-control" min="0">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">Next: Choose Cabinet</button>
+                    </form>
+                </div>
+
+                <!-- Cabinet Selection Step -->
+                <div id="cabinet-selection" class="card hidden">
+                    <h3>Step 2: Cabinet Assignment</h3>
+                    <div id="cabinet-message"></div>
+                    
+                    <div class="form-group">
+                        <h4>Choose Cabinet Option:</h4>
+                        <div>
+                            <input type="radio" id="use-available" name="cabinet-option" value="available" checked>
+                            <label for="use-available" style="margin-left: 10px;">Auto-assign to Available Cabinet</label>
+                            <small class="form-text text-muted">System will automatically assign to a random available cabinet</small>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <input type="radio" id="use-new" name="cabinet-option" value="new">
+                            <label for="use-new" style="margin-left: 10px;">Create New Cabinet</label>
+                        </div>
+                    </div>
+
+                    <!-- Available Cabinet Info -->
+                    <div id="available-cabinet-info" class="form-group">
+                        <p><strong>Available Cabinets:</strong> <span id="available-count">Loading...</span></p>
+                    </div>
+
+                    <!-- New Cabinet Input -->
+                    <div id="new-cabinet-section" class="form-group hidden">
+                        <label>New Cabinet Number:</label>
+                        <input type="text" id="new-cabinet-input" class="form-control" placeholder="Enter cabinet number">
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button type="button" onclick="app.goBackToForm()" class="btn btn-warning">Back to Form</button>
+                        <button type="button" onclick="app.finalizeRegistration()" class="btn btn-success">Complete Registration</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Borrow Items -->
+            <div id="borrow-items-section" class="hidden">
+                <div class="card">
+                    <h2>Available Items for Borrowing</h2>
+                    <div class="form-group">
+                        <label>Filter by Category:</label>
+                        <select id="filter-category" class="form-control" min="0">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filter by Package Code:</label>
+                        <select id="filter-package-code" class="form-control" min="0">
+                            <option value="">All Package Codes</option>
+                        </select>
+                    </div>
+                    <button onclick="loadAvailableItems()" class="btn btn-primary">Search</button>
+                    <div id="available-items"></div>
+                </div>
+            </div>
+
+            <!-- My Items -->
+            <div id="my-items-section" class="hidden">
+                <div class="card">
+                    <h2>My Borrowed Items</h2>
+                    <div id="borrowed-items"></div>
+                </div>
+                <div class="card">
+                    <h2>Return Items</h2>
+                    <div id="returnable-items"></div>
+                </div>
+                <div class="card">
+                    <h2>Pending Returns</h2>
+                    <div id="pending-returns"></div>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="admin-panel-section" class="hidden">
+                <div class="card">
+                    <h2>Admin Dashboard</h2>
+                    <div id="admin-stats"></div>
+                </div>
+                <div class="card">
+                    <h2>All Borrowed Items</h2>
+                    <div id="all-borrowed-items"></div>
+                </div>
+                <div class="card">
+                    <h2>Pending Approvals</h2>
+                    <div id="pending-approvals"></div>
+                </div>
+                <div class="card">
+                    <h2>Overdue Items</h2>
+                    <div id="overdue-items"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Add missing global function for search button
+        function loadAvailableItems() {
+            if (app && app.loadAvailableItems) {
+                app.loadAvailableItems();
+            } else {
+                console.error('App not initialized or loadAvailableItems method not found');
+            }
+        }
+    </script>
+</body>
+</html>
