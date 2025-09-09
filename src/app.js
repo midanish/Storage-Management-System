@@ -1,10 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-
-dotenv.config();
+const { handleDatabaseError } = require('../middleware/connectionHandler');
+const { getActiveUserCount } = require('../middleware/sessionManager');
 
 const app = express();
 
@@ -36,7 +35,11 @@ const specs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    activeUsers: getActiveUserCount()
+  });
 });
 
 const authRoutes = require('../routes/auth');
@@ -50,6 +53,9 @@ app.use('/api/items', itemRoutes);
 app.use('/api/borrow', borrowRoutes);
 app.use('/api/return', returnRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Database error handler middleware
+app.use(handleDatabaseError);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

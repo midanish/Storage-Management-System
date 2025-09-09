@@ -1,16 +1,18 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const { handleDatabaseError, asyncHandler } = require('./connectionHandler');
+const { trackUserActivity, checkConnectionLimit } = require('./sessionManager');
 
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token is required' });
+  }
+
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Access token is required' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, 'your-secret-key-here-123456');
     const user = await User.findOne({ where: { id: decoded.id } });
 
     if (!user) {
@@ -18,11 +20,21 @@ const authenticateToken = async (req, res, next) => {
     }
 
     req.user = user;
-    next();
+    
+    // Check connection limit and track user activity
+    checkConnectionLimit(req, res, () => {
+      trackUserActivity(req, res, next);
+    });
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    throw error; // Let asyncHandler catch database errors
   }
-};
+});
 
 const requireAdmin = (req, res, next) => {
   if (req.user.role !== 'admin') {
@@ -34,8 +46,8 @@ const requireAdmin = (req, res, next) => {
 const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
+    'your-secret-key-here-123456',
+    { expiresIn: '30m' } // 30 minutes to match idle timeout
   );
 };
 
