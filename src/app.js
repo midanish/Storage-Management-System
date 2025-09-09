@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { handleDatabaseError } = require('../middleware/connectionHandler');
@@ -11,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
 
 const swaggerOptions = {
   definition: {
@@ -35,7 +36,7 @@ const specs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/', (req, res) => {
-  res.sendFile('index.html', { root: 'public' });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 app.get('/health', (req, res) => {
