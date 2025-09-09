@@ -35,20 +35,7 @@ const specs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/', (req, res) => {
-  res.json({
-    message: 'Storage Management System API',
-    version: '1.0.0',
-    status: 'OK',
-    endpoints: {
-      health: '/health',
-      docs: '/api-docs',
-      auth: '/api/auth',
-      items: '/api/items',
-      borrow: '/api/borrow',
-      return: '/api/return',
-      admin: '/api/admin'
-    }
-  });
+  res.sendFile('index.html', { root: 'public' });
 });
 
 app.get('/health', (req, res) => {
