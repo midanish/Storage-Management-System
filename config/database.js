@@ -26,9 +26,12 @@ function getSequelizeInstance() {
           max: 1,
           min: 0,
           acquire: 30000,
-          idle: 300000, // 5 minutes idle time
-          evict: 300000,
-          handleDisconnects: true
+          idle: 600000, // 10 minutes idle time for serverless
+          evict: 600000,
+          handleDisconnects: true,
+          // Optimize for serverless
+          acquireTimeoutRetries: 1,
+          testOnBorrow: false
         },
         // Prevent multiple connections
         define: {
