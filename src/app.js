@@ -5,6 +5,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { handleDatabaseError } = require('../middleware/connectionHandler');
 const { getActiveUserCount } = require('../middleware/sessionManager');
+const { getConnectionStatus } = require('../config/database');
 
 const app = express();
 
@@ -43,7 +44,12 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    activeUsers: getActiveUserCount()
+    activeUsers: getActiveUserCount(),
+    dbConnections: getConnectionStatus(),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+    }
   });
 });
 

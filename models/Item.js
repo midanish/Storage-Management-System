@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { sequelize } = require('../config/database');
 
 const Item = sequelize.define('Item', {
   // Explicitly define the identifying columns since there's no id field
