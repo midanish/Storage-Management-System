@@ -140,7 +140,16 @@ async function forceConnectionReset() {
     if (sequelize) {
       console.log('Force resetting database connection pool...');
       
-      // Close existing connection manager
+      // First try to drain the connection pool without destroying the connection manager
+      const drainSuccess = await drainConnectionPool();
+      
+      if (drainSuccess) {
+        console.log('Database connection pool drained successfully');
+        return true;
+      }
+      
+      // If draining fails, fall back to closing connection manager
+      console.log('Draining failed, closing connection manager...');
       await sequelize.connectionManager.close();
       
       // Clear the singleton instance
