@@ -200,7 +200,9 @@ process.on('SIGINT', closeConnection);
 process.on('beforeExit', closeConnection);
 
 module.exports = {
-  sequelize: getSequelizeInstance(),
+  get sequelize() {
+    return getSequelizeInstance();
+  },
   closeConnection,
   drainConnectionPool,
   forceConnectionReset,
@@ -208,9 +210,10 @@ module.exports = {
   killUserConnection,
   getConnectionStatus: () => {
     try {
-      if (!sequelize) return 0;
+      const instance = getSequelizeInstance();
+      if (!instance) return 0;
       // Try to get connection pool status
-      const pool = sequelize.connectionManager.pool;
+      const pool = instance.connectionManager.pool;
       return pool ? pool.size || 0 : 0;
     } catch (error) {
       return sequelize ? 1 : 0; // Fallback: return 1 if sequelize exists
