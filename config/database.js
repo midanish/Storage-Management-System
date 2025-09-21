@@ -1,8 +1,12 @@
 const { Sequelize } = require('sequelize');
+const dns = require('dns');
 
 // Global singleton instance
 let sequelize = null;
 let connectionPromise = null;
+
+// DNS resolver for Vercel - use Cloudflare DNS
+dns.setServers(['1.1.1.1', '1.0.0.1']);
 
 function getSequelizeInstance() {
   if (!sequelize) {
