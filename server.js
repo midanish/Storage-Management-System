@@ -1,6 +1,6 @@
 require('dotenv').config();
 const app = require('./src/app');
-const { sequelize } = require('./config/database');
+const { sequelize, testDatabaseConnection } = require('./config/database');
 const { User } = require('./models');
 require('./config/scheduler');
 
@@ -25,9 +25,19 @@ async function initializeAdmin() {
 
 async function startServer() {
   try {
-    await sequelize.authenticate();
-    console.log('Database connection established successfully.');
-    
+    // Test database connection with fallback
+    const connectionResult = await testDatabaseConnection();
+
+    if (!connectionResult.success) {
+      throw connectionResult.error;
+    }
+
+    if (connectionResult.usingBackup) {
+      console.log('⚠️  Using backup database (Filess.io)');
+    } else {
+      console.log('✅ Using primary database (InfinityFree)');
+    }
+
     await sequelize.sync({ force: false });
     console.log('Database synchronized.');
 

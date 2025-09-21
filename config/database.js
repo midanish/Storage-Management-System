@@ -10,6 +10,7 @@ dns.setServers(['1.1.1.1', '1.0.0.1']);
 
 function getSequelizeInstance() {
   if (!sequelize) {
+    console.log('Attempting connection to primary database...');
     sequelize = new Sequelize(
       process.env.DB_NAME,
       process.env.DB_USER,
@@ -61,6 +62,85 @@ function getSequelizeInstance() {
     console.log('Database instance created (connection will be established on first use)');
   }
   return sequelize;
+}
+
+// Create backup database instance
+function createBackupSequelizeInstance() {
+  console.log('Creating backup database connection...');
+  return new Sequelize(
+    process.env.BACKUP_DB_NAME,
+    process.env.BACKUP_DB_USER,
+    process.env.BACKUP_DB_PASS,
+    {
+      host: process.env.BACKUP_DB_HOST,
+      port: process.env.BACKUP_DB_PORT || 3306,
+      dialect: process.env.BACKUP_DB_DIALECT || 'mysql',
+      dialectModule: require('mysql2'),
+      logging: false,
+      dialectOptions: {
+        connectTimeout: 60000,
+        ssl: false,
+        flags: ['-FOUND_ROWS']
+      },
+      pool: {
+        max: 1,
+        min: 0,
+        acquire: 10000,
+        idle: 5000,
+        evict: 5000,
+        handleDisconnects: true,
+        acquireTimeoutRetries: 0,
+        testOnBorrow: false
+      },
+      define: {
+        charset: 'utf8',
+        timestamps: true
+      },
+      retry: {
+        match: [
+          /ECONNRESET/,
+          /ENOTFOUND/,
+          /ECONNREFUSED/,
+          /ETIMEDOUT/,
+          /max_user_connections/,
+          /ER_USER_LIMIT_REACHED/
+        ],
+        max: 2
+      }
+    }
+  );
+}
+
+// Test database connection with fallback
+async function testDatabaseConnection() {
+  try {
+    console.log('Testing primary database connection...');
+    await sequelize.authenticate();
+    console.log('Primary database connection successful');
+    return { success: true, usingBackup: false };
+  } catch (error) {
+    console.warn('Primary database connection failed:', error.message);
+    console.log('Attempting backup database connection...');
+
+    try {
+      // Create a test backup connection
+      const backupInstance = createBackupSequelizeInstance();
+      await backupInstance.authenticate();
+      await backupInstance.close();
+
+      console.log('Backup database connection test successful');
+      console.log('Switching to backup database...');
+
+      // Simply replace the global instance without closing
+      sequelize = createBackupSequelizeInstance();
+
+      console.log('Backup database connection active');
+      return { success: true, usingBackup: true };
+    } catch (backupError) {
+      console.error('Backup database connection also failed:', backupError.message);
+      return { success: false, error: backupError };
+    }
+  }
 }
 
 // Force close all connections
@@ -216,6 +296,7 @@ module.exports = {
   get sequelize() {
     return getSequelizeInstance();
   },
+  testDatabaseConnection,
   closeConnection,
   drainConnectionPool,
   forceConnectionReset,
