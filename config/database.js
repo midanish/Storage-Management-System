@@ -7,13 +7,13 @@ let connectionPromise = null;
 function getSequelizeInstance() {
   if (!sequelize) {
     sequelize = new Sequelize(
-      'Storage_atomicdig',
-      'Storage_atomicdig',
-      'e7deb901d0a82bf0ed7b3089fa64a842e7b479d7',
+      process.env.DB_NAME,
+      process.env.DB_USER,
+      process.env.DB_PASS,
       {
-        host: '25w29u.h.filess.io',
-        port: 3306,
-        dialect: 'mysql',
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 3306,
+        dialect: process.env.DB_DIALECT || 'mysql',
         dialectModule: require('mysql2'),
         logging: false,
         dialectOptions: {
@@ -25,12 +25,12 @@ function getSequelizeInstance() {
         pool: {
           max: 1,
           min: 0,
-          acquire: 30000,
-          idle: 600000, // 10 minutes idle time for serverless
-          evict: 600000,
+          acquire: 10000,
+          idle: 5000, // 5 seconds idle time for serverless
+          evict: 5000,
           handleDisconnects: true,
           // Optimize for serverless
-          acquireTimeoutRetries: 1,
+          acquireTimeoutRetries: 0,
           testOnBorrow: false
         },
         // Prevent multiple connections
